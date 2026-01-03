@@ -1,7 +1,7 @@
 {
-  "name": "truecallerjs_bot",
-  "version": "1.0.0",
-  "description": "NumVerify Phone Lookup Bot",
+  "name": "phone-lookup-bot",
+  "version": "5.0.0",
+  "description": "Professional Phone Lookup Bot (No PayPal)",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
