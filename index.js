@@ -1,3 +1,54 @@
+function improveNumVerifyData(data) {
+    let carrier = data.carrier;
+    let location = data.location;
+    
+    // Fix MVNO carrier
+    if (carrier && carrier.toUpperCase() === 'MVNO') {
+        carrier = 'Mobile Virtual Network Operator';
+    }
+    
+    // Fix MVNO location
+    if (location && location.toUpperCase() === 'MVNO') {
+        location = 'Singapore';
+    }
+    
+    // Singapore-specific fixes
+    if (data.country_code === 'SG') {
+        if (!location || location === 'Unknown') {
+            location = 'Singapore';
+        }
+        
+        // Common Singapore MVNO names
+        const sgMVNOs = {
+            'circles': 'Circles.Life',
+            'gomo': 'GOMO',
+            'giga': 'giga!',
+            'zero': 'Zero1',
+            'myrepublic': 'MyRepublic',
+            'vivifi': 'Vivifi',
+            'changi': 'Changi Mobile'
+        };
+        
+        if (carrier) {
+            const lowerCarrier = carrier.toLowerCase();
+            for (const [key, name] of Object.entries(sgMVNOs)) {
+                if (lowerCarrier.includes(key)) {
+                    carrier = `${name} (MVNO)`;
+                    break;
+                }
+            }
+        }
+    }
+    
+    return {
+        ...data,
+        carrier: carrier || 'Unknown',
+        location: location || data.country_name || 'Unknown'
+    };
+}
+
+// Use it in your lookup function
+const improvedData = improveNumVerifyData(data);
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const axios = require('axios');
