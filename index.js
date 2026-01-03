@@ -1,12 +1,15 @@
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
+const axios = require('axios');
 
 // ========== CONFIGURATION ==========
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8558096238:AAEJncP3kdcaavmlkwng6LoPraaH16JxHAM';
+const NUMVERIFY_API_KEY = process.env.NUMVERIFY_API_KEY || '45257ed8f00544fc46d388ad64adfe4a';
 const PORT = process.env.PORT || 10000;
 
-console.log('=== PAYMENT BOT STARTING ===');
+console.log('=== NUMVERIFY PHONE LOOKUP BOT STARTING ===');
 console.log('Bot Token:', TOKEN.substring(0, 10) + '...');
+console.log('NumVerify API Key:', NUMVERIFY_API_KEY.substring(0, 8) + '...');
 console.log('Port:', PORT);
 
 // ========== CREATE BOT ==========
@@ -21,261 +24,255 @@ const bot = new TelegramBot(TOKEN, {
     }
 });
 
-// ========== EXPRESS SERVER (FOR RENDER) ==========
+// ========== SIMPLE USER DATABASE ==========
+const users = {};
+
+// ========== NUMVERIFY LOOKUP FUNCTION ==========
+async function numVerifyLookup(phoneNumber, userId) {
+    try {
+        console.log(`🔍 NumVerify lookup for: ${phoneNumber} by user ${userId}`);
+        
+        if (!users[userId]) {
+            users[userId] = { lookupsUsed: 0, plan: 'free', balance: 5 };
+        }
+        
+        if (users[userId].balance <= 0) {
+            return {
+                success: false,
+                message: '❌ No balance remaining. Please recharge with /payment.',
+                balance: users[userId].balance
+            };
+        }
+        
+        const response = await axios.get('http://apilayer.net/api/validate', {
+            params: {
+                access_key: NUMVERIFY_API_KEY,
+                number: phoneNumber,
+                format: 1,
+                country_code: ''
+            },
+            timeout: 10000
+        });
+        
+        const data = response.data;
+        
+        users[userId].lookupsUsed += 1;
+        users[userId].balance -= 1;
+        
+        console.log(`✅ Lookup successful. User ${userId} balance: ${users[userId].balance}`);
+        
+        if (data.valid) {
+            return {
+                success: true,
+                data: {
+                    number: data.international_format,
+                    localFormat: data.local_format,
+                    country: data.country_name,
+                    countryCode: data.country_code,
+                    carrier: data.carrier || 'Unknown',
+                    lineType: data.line_type,
+                    location: data.location || 'Unknown',
+                    isValid: data.valid
+                },
+                balance: users[userId].balance,
+                cost: 1
+            };
+        } else {
+            return {
+                success: false,
+                message: 'Invalid phone number format',
+                balance: users[userId].balance
+            };
+        }
+        
+    } catch (error) {
+        console.error('❌ NumVerify API error:', error.message);
+        return {
+            success: false,
+            message: 'API service temporarily unavailable.',
+            balance: users[userId]?.balance || 0
+        };
+    }
+}
+
+// ========== EXPRESS SERVER ==========
 const app = express();
 
-// Health check endpoint
 app.get('/', (req, res) => {
     res.json({
         status: 'online',
-        service: 'No1PhoneSearchBot Payment Service',
+        service: 'NumVerify Phone Lookup Bot',
+        pricing: '$0.10 per lookup',
+        free_credits: '5 per new user',
+        support: '@Moneymakingmachine8888',
         timestamp: new Date().toISOString()
     });
 });
 
 app.listen(PORT, () => {
     console.log(`✅ Server running on port ${PORT}`);
-    console.log(`✅ Health check: https://your-render-url.onrender.com/`);
-});
-
-// ========== ERROR HANDLING ==========
-bot.on('polling_error', (error) => {
-    console.error('❌ Telegram API Error:', error.code, error.message);
-    
-    // Don't exit on error, just log it
-    if (error.code === 'ETELEGRAM') {
-        console.log('⚠️ Telegram API issue, but bot continues...');
-    }
-});
-
-bot.on('error', (error) => {
-    console.error('❌ General bot error:', error.message);
+    console.log(`✅ Health check: https://truecallerjs-bot-6a35.onrender.com/`);
 });
 
 // ========== BOT COMMANDS ==========
 
-// Start command
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
+    const userId = msg.from.id;
     const userName = msg.from.first_name || 'User';
     
-    console.log(`👋 /start from ${userName} (${chatId})`);
+    if (!users[userId]) {
+        users[userId] = {
+            lookupsUsed: 0,
+            plan: 'free',
+            balance: 5,
+            joined: new Date().toISOString()
+        };
+    }
     
-    const welcomeMessage = `👋 Hello ${userName}!
-
-🤖 *Welcome to No 1 Phone Search Program Bot*
-
-🔍 *Features:*
-• Advanced phone number lookup
-• Real-time data access
-• Unlimited search capabilities
-
-💳 *Payment Plans:*
-• Basic: $24.99 USD
-• Pro: $49.99 USD (Recommended)
-• Business: $99.99 USD
-
-📋 *Commands:*
-/start - Welcome message
-/payment - View payment options
-/help - Get assistance
-
-📞 *Support:* @Moneymakingmachine8888
-
-_All payments in USD only_`;
-
+    const welcomeMessage = `👋 *Welcome ${userName}!*\n\n` +
+    `🔍 *NumVerify Phone Lookup Service*\n` +
+    `• Real-time number validation\n` +
+    `• Carrier identification\n` +
+    `• Country & location data\n\n` +
+    `💰 *Your Account:*\n` +
+    `• Credits: ${users[userId].balance}\n` +
+    `• Lookups used: ${users[userId].lookupsUsed}\n\n` +
+    `📋 *Commands:*\n` +
+    `/lookup [number] - Search phone number\n` +
+    `/balance - Check credits\n` +
+    `/payment - Buy more credits\n` +
+    `/help - Support\n\n` +
+    `💡 *Example:* /lookup +6512345678\n\n` +
+    `📞 *Support:* @Moneymakingmachine8888`;
+    
     bot.sendMessage(chatId, welcomeMessage, {
         parse_mode: 'Markdown'
     });
 });
 
-// ========== PAYMENT COMMAND (MAIN FEATURE) ==========
+bot.onText(/\/lookup (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const phoneNumber = match[1].trim();
+    const userName = msg.from.first_name || 'User';
+    
+    console.log(`🔍 Lookup request: ${phoneNumber}`);
+    
+    if (!phoneNumber.match(/^[+]?[0-9\s\-\(\)]{10,}$/)) {
+        return bot.sendMessage(chatId,
+            `❌ *Invalid Format*\n\nUse:\n\`/lookup +6512345678\`\n\`/lookup 91234567\``,
+            { parse_mode: 'Markdown' }
+        );
+    }
+    
+    const searchingMsg = await bot.sendMessage(chatId,
+        `🔍 *Searching...*\nNumber: \`${phoneNumber}\`\n⏳ Please wait...`,
+        { parse_mode: 'Markdown' }
+    );
+    
+    const result = await numVerifyLookup(phoneNumber, userId);
+    
+    if (result.success) {
+        const data = result.data;
+        const balance = result.balance;
+        
+        const resultMessage = `✅ *LOOKUP RESULTS*\n\n` +
+                              `📱 *Number:* \`${data.number}\`\n` +
+                              `🌍 *Country:* ${data.country}\n` +
+                              `🏢 *Carrier:* ${data.carrier}\n` +
+                              `📞 *Type:* ${data.lineType}\n` +
+                              `📍 *Location:* ${data.location}\n\n` +
+                              `💰 *Credits:* ${balance} remaining\n` +
+                              `💵 *Cost:* $0.10 USD\n\n` +
+                              `Need more? /payment`;
+        
+        await bot.editMessageText(resultMessage, {
+            chat_id: chatId,
+            message_id: searchingMsg.message_id,
+            parse_mode: 'Markdown'
+        });
+        
+    } else {
+        await bot.editMessageText(
+            `❌ *Failed*\n${result.message}\n\nCredits: ${result.balance}\n/payment to recharge`,
+            {
+                chat_id: chatId,
+                message_id: searchingMsg.message_id,
+                parse_mode: 'Markdown'
+            }
+        );
+    }
+});
+
+bot.onText(/\/balance/, (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    
+    if (!users[userId]) {
+        users[userId] = { lookupsUsed: 0, plan: 'free', balance: 5 };
+    }
+    
+    const user = users[userId];
+    
+    const balanceMessage = `💰 *ACCOUNT*\n\n` +
+                          `*Credits:* ${user.balance}\n` +
+                          `*Used:* ${user.lookupsUsed}\n` +
+                          `*Plan:* ${user.plan}\n\n` +
+                          `*Packages:*\n` +
+                          `• 10 credits = $0.99\n` +
+                          `• 100 credits = $9.99\n` +
+                          `• 1000 credits = $49.99\n\n` +
+                          `/payment to buy`;
+    
+    bot.sendMessage(chatId, balanceMessage, { parse_mode: 'Markdown' });
+});
+
 bot.onText(/\/payment/, (msg) => {
     const chatId = msg.chat.id;
-    const userName = msg.from.first_name || 'Customer';
     
-    console.log(`💰 /payment request from ${userName} (${chatId})`);
+    const paymentMessage = `💰 *BUY CREDITS*\n\n` +
+                          `*Packages:*\n` +
+                          `🟢 10 credits = $0.99\n` +
+                          `🔵 100 credits = $9.99\n` +
+                          `🟡 1000 credits = $49.99 ✅\n` +
+                          `🔴 5000 credits = $99.99\n\n` +
+                          `*Payment Methods:*\n` +
+                          `🅿️ PayPal: https://paypal.com/ncp/payment/8RX8ZKB38B9HG\n` +
+                          `🏦 Wise: 738120584057198\n` +
+                          `₿ USDT: TE3pMrHtiUu37NjYkdDo4hhJW3xekBiCPr\n` +
+                          `📱 PayNow: 202550900H\n\n` +
+                          `*After payment:*\n` +
+                          `Send receipt to @Moneymakingmachine8888`;
     
-    const paymentMessage = `<b>💰 NO 1 PHONE SEARCH PROGRAM - PAYMENT PORTAL</b>
-
-🏦 <i>Secure Payment Gateway</i>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>🎯 SELECT YOUR PLAN (USD ONLY)</b>
-
-<b>💼 BASIC PLAN</b>
-• Price: <b>$24.99 USD</b>
-• 50 searches per month
-• Basic lookup features
-• Email support
-
-<b>⭐ PRO PLAN (RECOMMENDED)</b>
-• Price: <b>$49.99 USD</b>
-• Unlimited searches
-• Real-time data & reports
-• Priority support
-• Dashboard access
-
-<b>🏢 BUSINESS PLAN</b>
-• Price: <b>$99.99 USD</b>
-• All Pro features
-• API access
-• Team accounts (up to 5 users)
-• Dedicated support
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>💳 PAYMENT METHODS</b>
-
-<b>🅿️ PayPal (Recommended)</b>
-<code>Link: https://www.paypal.com/ncp/payment/8RX8ZKB38B9HG</code>
-
-<b>🏦 Bank Transfer (Wise)</b>
-<code>Account: 738120584057198</code>
-<code>Currency: USD Only</code>
-
-<b>₿ Cryptocurrency (USDT TRC-20)</b>
-<code>Address: TE3pMrHtiUu37NjYkdDo4hhJW3xekBiCPr</code>
-<code>Network: TRC-20 ONLY</code>
-
-<b>📱 PayNow (Singapore Only)</b>
-<code>UEN: 202550900H</code>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>📞 POST-PAYMENT INSTRUCTIONS</b>
-
-1. Complete payment in <b>USD only</b>
-2. Save payment receipt/screenshot
-3. Contact: <b>@Moneymakingmachine8888</b>
-4. Send receipt + Telegram username
-5. Access granted within 24 hours
-
-<b>⚠️ IMPORTANT NOTES:</b>
-• Singapore users: Deep Search ($30/search) available via PM
-• All payments must be in USD
-• Include your Telegram username in payment reference
-
-<b>🔒 Bank-Level Security • Encrypted Transactions</b>`;
-
-    const options = {
-        parse_mode: 'HTML',
+    bot.sendMessage(chatId, paymentMessage, {
+        parse_mode: 'Markdown',
         reply_markup: {
             inline_keyboard: [
-                [
-                    { 
-                        text: "💳 Pay with PayPal", 
-                        url: "https://www.paypal.com/ncp/payment/8RX8ZKB38B9HG" 
-                    }
-                ],
-                [
-                    { 
-                        text: "📞 Contact Support", 
-                        url: "https://t.me/Moneymakingmachine8888" 
-                    }
-                ],
-                [
-                    { text: "💰 Wise Info", callback_data: "wise_info" },
-                    { text: "₿ Crypto Info", callback_data: "crypto_info" }
-                ],
-                [
-                    { text: "✅ Payment Made", callback_data: "payment_made" }
-                ]
+                [{ text: "💳 Pay with PayPal", url: "https://paypal.com/ncp/payment/8RX8ZKB38B9HG" }],
+                [{ text: "📞 Contact", url: "https://t.me/Moneymakingmachine8888" }]
             ]
         }
-    };
-
-    bot.sendMessage(chatId, paymentMessage, options)
-        .then(() => {
-            console.log(`✅ Payment menu sent to ${userName}`);
-        })
-        .catch(err => {
-            console.error(`❌ Failed to send to ${chatId}:`, err.message);
-        });
+    });
 });
 
-// ========== CALLBACK QUERIES ==========
-bot.on('callback_query', (callbackQuery) => {
-    const chatId = callbackQuery.message.chat.id;
-    const data = callbackQuery.data;
-    const userId = callbackQuery.from.id;
-
-    console.log(`🔄 Callback from ${userId}: ${data}`);
-
-    // Answer callback immediately
-    bot.answerCallbackQuery(callbackQuery.id);
-
-    if (data === 'wise_info') {
-        bot.sendMessage(chatId, 
-            `<b>🏦 Wise Transfer Instructions:</b>\n\n` +
-            `<code>Account Number: 738120584057198</code>\n\n` +
-            `• Transfer in <b>USD only</b>\n` +
-            `• Include your Telegram username in reference\n` +
-            `• Send receipt to @Moneymakingmachine8888\n\n` +
-            `💡 <i>Recommended for international transfers</i>`,
-            { parse_mode: 'HTML' }
-        );
-    } 
-    else if (data === 'crypto_info') {
-        bot.sendMessage(chatId,
-            `<b>₿ Cryptocurrency Payment (USDT):</b>\n\n` +
-            `<code>Wallet: TE3pMrHtiUu37NjYkdDo4hhJW3xekBiCPr</code>\n\n` +
-            `• Network: <b>TRC-20 ONLY</b> (Tron)\n` +
-            `• Token: USDT (Tether)\n` +
-            `• Amount: USD equivalent of your chosen plan\n` +
-            `• Send receipt to @Moneymakingmachine8888\n\n` +
-            `⚠️ <i>Other tokens/networks will be lost</i>`,
-            { parse_mode: 'HTML' }
-        );
-    }
-    else if (data === 'payment_made') {
-        bot.sendMessage(chatId,
-            `✅ <b>Thank you for your payment!</b>\n\n` +
-            `Please send your payment receipt to:\n` +
-            `<b>@Moneymakingmachine8888</b>\n\n` +
-            `📋 <b>Include in your message:</b>\n` +
-            `• Your Telegram username\n` +
-            `• Payment method used\n` +
-            `• Plan selected\n` +
-            `• Payment date/time\n\n` +
-            `⏱️ <i>Activation within 24 hours of verification</i>\n` +
-            `📧 <i>Email: support@blackworks.gl</i>`,
-            { parse_mode: 'HTML' }
-        );
-    }
-});
-
-// ========== HELP COMMAND ==========
 bot.onText(/\/help/, (msg) => {
-    const chatId = msg.chat.id;
-    
-    bot.sendMessage(chatId,
-        `🆘 <b>Help & Support</b>\n\n` +
-        `<b>Common Issues:</b>\n` +
-        `• Payment not showing? Contact @Moneymakingmachine8888\n` +
-        `• Need invoice? Provide email address\n` +
-        `• Singapore users: PM for Deep Search add-on\n\n` +
-        `<b>Contact Support:</b>\n` +
-        `• Telegram: @Moneymakingmachine8888\n` +
-        `• Email: support@blackworks.gl\n\n` +
-        `<b>Response Time:</b> Within 24 hours`,
-        { parse_mode: 'HTML' }
+    bot.sendMessage(msg.chat.id,
+        `🆘 *Help*\n\n` +
+        `/start - Register\n` +
+        `/lookup [number] - Search\n` +
+        `/balance - Check credits\n` +
+        `/payment - Buy credits\n\n` +
+        `Support: @Moneymakingmachine8888`,
+        { parse_mode: 'Markdown' }
     );
 });
 
-// ========== BOT READY CONFIRMATION ==========
 bot.getMe().then((botInfo) => {
     console.log('================================');
-    console.log('✅ BOT SUCCESSFULLY STARTED!');
+    console.log('✅ NUMVERIFY BOT STARTED!');
     console.log(`✅ Bot: @${botInfo.username}`);
-    console.log(`✅ Name: ${botInfo.first_name}`);
-    console.log(`✅ ID: ${botInfo.id}`);
     console.log('================================');
-    console.log('✅ Use commands:');
-    console.log('   /start - Welcome message');
-    console.log('   /payment - Payment options');
-    console.log('   /help - Support');
-    console.log('================================');
-}).catch((error) => {
-    console.error('❌ Bot initialization failed:', error.message);
 });
 
-console.log('🚀 Payment bot initialization complete!');
+console.log('🚀 Bot ready!');
