@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Options | No 1 Phone Search Program</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { background: #f5f7fa; min-height: 100vh; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #003087 0%, #009cde 100%); color: white; padding: 30px; text-align: center; }
+        .section { padding: 25px; border-bottom: 1px solid #eee; }
+        .payment-method { background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 10px; border-left: 4px solid #003087; }
+        .btn { display: inline-block; background: #003087; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 10px 0; }
+        .telegram-btn { background: #0088cc; }
+        code { background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 14px; }
+        .copy-btn { background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-left: 10px; }
+        .plan { background: white; padding: 20px; border-radius: 10px; border: 2px solid #dee2e6; text-align: center; }
+        .plan.recommended { border-color: #003087; position: relative; }
+        .plan.recommended::before { content: "Most Popular"; background: #003087; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Payment Options</h1>
+            <p>No 1 Phone Search Program - Advanced Phone Lookup Service</p>
+        </div>
+        
+        <div class="section">
+            <h2>📋 Pricing Plans (USD Only)</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+                <div class="plan">
+                    <h3>Basic Plan</h3>
+                    <p style="font-size: 24px; font-weight: bold; color: #28a745;">$24.99</p>
+                    <p>50 searches/month</p>
+                    <p>Basic lookup</p>
+                </div>
+                <div class="plan recommended">
+                    <h3>Pro Plan</h3>
+                    <p style="font-size: 24px; font-weight: bold; color: #28a745;">$49.99</p>
+                    <p>Unlimited searches</p>
+                    <p>Real-time data</p>
+                </div>
+                <div class="plan">
+                    <h3>Business Plan</h3>
+                    <p style="font-size: 24px; font-weight: bold; color: #28a745;">$99.99</p>
+                    <p>API access</p>
+                    <p>Team accounts</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>💳 Payment Methods</h2>
+            
+            <div class="payment-method">
+                <h3>🅿️ PayPal</h3>
+                <p><strong>Link:</strong> <code>https://www.paypal.com/ncp/payment/8RX8ZKB38B9HG</code></p>
+                <button class="copy-btn" onclick="copyToClipboard('https://www.paypal.com/ncp/payment/8RX8ZKB38B9HG', this)">Copy Link</button>
+                <br><br>
+                <a href="https://www.paypal.com/ncp/payment/8RX8ZKB38B9HG" class="btn" target="_blank">Pay with PayPal</a>
+            </div>
+            
+            <div class="payment-method">
+                <h3>🏦 Wise Transfer</h3>
+                <p><strong>Account Number:</strong> <code>738120584057198</code></p>
+                <button class="copy-btn" onclick="copyToClipboard('738120584057198', this)">Copy</button>
+                <p><small>Send payment in USD only</small></p>
+            </div>
+            
+            <div class="payment-method">
+                <h3>₿ USDT (TRC-20)</h3>
+                <p><strong>Wallet Address:</strong> <code>TE3pMrHtiUu37NjYkdDo4hhJW3xekBiCPr</code></p>
+                <button class="copy-btn" onclick="copyToClipboard('TE3pMrHtiUu37NjYkdDo4hhJW3xekBiCPr', this)">Copy</button>
+                <p><small>TRC-20 Network Only. Send USD equivalent.</small></p>
+            </div>
+            
+            <div class="payment-method">
+                <h3>📱 PayNow (Singapore Only)</h3>
+                <p><strong>UEN Number:</strong> <code>202550900H</code></p>
+                <button class="copy-btn" onclick="copyToClipboard('202550900H', this)">Copy</button>
+                <p><small>For Singapore residents only</small></p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📞 Contact After Payment</h2>
+            <p>After payment, contact me on Telegram for activation:</p>
+            <a href="https://t.me/Moneymakingmachine8888" class="btn telegram-btn" target="_blank">
+                Telegram: @Moneymakingmachine8888
+            </a>
+            <p><small>Send your payment receipt and Telegram username</small></p>
+        </div>
+        
+        <div class="section">
+            <h2>⚠️ Important Instructions</h2>
+            <ul>
+                <li>All payments must be in <strong>USD (United States Dollars)</strong></li>
+                <li>Singapore users: Deep Search ($30/search) available via Telegram</li>
+                <li>Access granted within 24 hours after payment confirmation</li>
+                <li>Keep your payment receipt for verification</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        function copyToClipboard(text, button) {
+            navigator.clipboard.writeText(text).then(() => {
+                const original = button.innerHTML;
+                button.innerHTML = '✅ Copied!';
+                button.style.background = '#218838';
+                setTimeout(() => {
+                    button.innerHTML = original;
+                    button.style.background = '';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
